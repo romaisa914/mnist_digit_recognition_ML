@@ -1,45 +1,36 @@
 import streamlit as st
 from streamlit_drawable_canvas import st_canvas
-import numpy as np
-import joblib
 from PIL import Image
+import numpy as np
 from skimage.transform import resize
+import joblib
 
-# Load trained model
+# Load model
 model = joblib.load("model.pkl")
 
-st.set_page_config(page_title="MNIST Digit Recognizer", layout="centered")
-st.title("🖌️ MNIST Digit Recognizer")
-st.write("Draw a digit (0-9) below and click **Predict**!")
+st.title("MNIST Digit Recognizer")
+st.markdown("Draw a digit (0-9) below:")
 
-# Canvas for drawing
+# Create canvas
 canvas_result = st_canvas(
-    fill_color="white",
-    stroke_width=10,
-    stroke_color="black",
-    background_color="white",
+    fill_color="#000000",
+    stroke_width=20,
+    stroke_color="#FFFFFF",
+    background_color="#000000",
     height=280,
     width=280,
     drawing_mode="freedraw",
     key="canvas",
 )
 
-# Prediction logic
 if st.button("Predict"):
     if canvas_result.image_data is not None:
-        # Convert to grayscale (remove alpha) and resize to 8x8
-        img = Image.fromarray((canvas_result.image_data[:, :, :3]).astype("uint8")).convert("L")
-        img_resized = resize(np.array(img), (8, 8), anti_aliasing=True)
-
-        # Invert colors and scale to 0–16 like MNIST
-        img_rescaled = 16 - (img_resized / 255.0 * 16)
-
-        # Flatten and clean data
-        img_flattened = img_rescaled.reshape(1, -1)
-        img_flattened = np.nan_to_num(img_flattened).astype("float64")
-
-        # Predict
+        img = Image.fromarray((canvas_result.image_data[:, :, 0]).astype("uint8"))
+        img = img.resize((8, 8)).convert("L")  # Resize to 8x8
+        img_array = np.array(img)
+        img_array = 16 - (img_array / 16).astype("int")  # Normalize to 0-16 scale
+        img_flattened = img_array.flatten().reshape(1, -1)
         prediction = model.predict(img_flattened)[0]
-        st.success(f"🎯 Predicted Digit: **{prediction}**")
+        st.success(f"Predicted Digit: {prediction}")
     else:
-        st.warning("⚠️ Please draw a digit first!")
+        st.warning("Please draw a digit before predicting.")
