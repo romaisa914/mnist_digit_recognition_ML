@@ -3,3 +3,5 @@ scikit-learn
 joblib
 numpy
 streamlit-drawable-canvas
+scikit-image
+
