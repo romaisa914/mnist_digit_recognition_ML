@@ -8,10 +8,11 @@ from skimage.transform import resize
 # Load trained model
 model = joblib.load("model.pkl")
 
-st.title("🖌️ MNIST Digit Recognizer (Draw Your Digit)")
-st.write("Draw a digit (0-9) below and click Predict!")
+st.set_page_config(page_title="MNIST Digit Recognizer", layout="centered")
+st.title("🖌️ MNIST Digit Recognizer")
+st.write("Draw a digit (0-9) below and click **Predict**!")
 
-# Create a canvas
+# Canvas for drawing
 canvas_result = st_canvas(
     fill_color="white",
     stroke_width=10,
@@ -23,13 +24,22 @@ canvas_result = st_canvas(
     key="canvas",
 )
 
+# Prediction logic
 if st.button("Predict"):
     if canvas_result.image_data is not None:
-        # Convert to grayscale and resize to 8x8 like MNIST
-        img = Image.fromarray((canvas_result.image_data[:, :, 0:3]).astype('uint8')).convert('L')
+        # Convert to grayscale (remove alpha) and resize to 8x8
+        img = Image.fromarray((canvas_result.image_data[:, :, :3]).astype("uint8")).convert("L")
         img_resized = resize(np.array(img), (8, 8), anti_aliasing=True)
-        img_rescaled = (16 - (img_resized / 255.0 * 16)).reshape(1, -1)  # Invert to match MNIST
-        prediction = model.predict(img_rescaled)[0]
+
+        # Invert colors and scale to 0–16 like MNIST
+        img_rescaled = 16 - (img_resized / 255.0 * 16)
+
+        # Flatten and clean data
+        img_flattened = img_rescaled.reshape(1, -1)
+        img_flattened = np.nan_to_num(img_flattened).astype("float64")
+
+        # Predict
+        prediction = model.predict(img_flattened)[0]
         st.success(f"🎯 Predicted Digit: **{prediction}**")
     else:
-        st.warning("Please draw something first.")
+        st.warning("⚠️ Please draw a digit first!")
