@@ -1,7 +1,5 @@
 streamlit
-streamlit-drawable-canvas
-scikit-learn==1.3.0
-Pillow
+scikit-learn
 numpy
-scikit-image
+pillow
 joblib
