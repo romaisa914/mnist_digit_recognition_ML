@@ -1,48 +1,27 @@
 import streamlit as st
-from streamlit_drawable_canvas import st_canvas
-from PIL import Image
-import numpy as np
 import joblib
-from skimage.transform import resize
+import numpy as np
+from PIL import Image, ImageOps
 
 # Load the trained model
 model = joblib.load("model.pkl")
 
-st.title("MNIST Digit Recognition")
-st.markdown("Draw a digit (0–9) below and click **Predict** to see the result.")
+st.title("MNIST Digit Recognizer")
+st.write("Upload an image of a digit (0-9) written in black on white background.")
 
-# Canvas for drawing
-canvas_result = st_canvas(
-    fill_color="#000000",
-    stroke_width=10,
-    stroke_color="#FFFFFF",
-    background_color="#000000",
-    width=200,
-    height=200,
-    drawing_mode="freedraw",
-    key="canvas"
-)
+uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "png", "jpeg"])
 
-if canvas_result.image_data is not None:
-    img = canvas_result.image_data
+if uploaded_file is not None:
+    image = Image.open(uploaded_file).convert("L")
+    st.image(image, caption="Uploaded Image", use_column_width=True)
 
-    if st.button("Predict"):
-        # Convert RGBA to grayscale
-        img_gray = np.dot(img[..., :3], [0.2989, 0.5870, 0.1140])
-        
-        # Resize to 8x8 like the original digits dataset
-        img_resized = resize(img_gray, (8, 8), anti_aliasing=True)
+    # Preprocess the image
+    image = ImageOps.invert(image)
+    image = image.resize((8, 8))  # Downscale to 8x8 to match sklearn digits
+    image = np.array(image)
+    image = 16 * image / 255.0  # Scale to match dataset
+    flat_data = image.reshape(1, -1)
 
-        # Invert colors (white digit on black background)
-        img_resized = 1.0 - img_resized
-
-        # Scale pixel values to match training data (0–16)
-        img_scaled = (img_resized * 16).astype(np.int32)
-
-        # Flatten the image
-        img_flattened = img_scaled.reshape(1, -1)
-
-        # Make prediction
-        prediction = model.predict(img_flattened)[0]
-
-        st.subheader(f"Predicted Digit: {prediction}")
+    # Predict
+    prediction = model.predict(flat_data)[0]
+    st.write(f"### Predicted Digit: {prediction}")
